@@ -11,7 +11,7 @@ from io import BytesIO
 st.set_page_config(layout="wide")
 
 # Define API configurations
-api_key = st.secrets["AI_API"]
+api_key = st.secrets["api_key"]
 base_url = "https://api.aimlapi.com"
 openai.api_key = api_key
 openai.api_base = base_url
@@ -115,8 +115,8 @@ async def translate_text(text, target_language):
 
 async def fetch_article_by_title(title):
     """Fetches an article's text by searching for its title."""
-    API_key = st.secrets["GOOGLE_API"]
-    search_engine_id = st.secrets["GOOGLE_ID"]
+    API_key = st.secrets["API_key"]
+    search_engine_id = st.secrets["search_engine_id"]
     search_url = f"https://www.googleapis.com/customsearch/v1?q={requests.utils.quote(title)}&key={API_key}&cx={search_engine_id}"
     
     try:
@@ -139,8 +139,8 @@ async def fetch_article_by_title(title):
 
 async def search_articles(query):
     """Searches for articles based on a query and returns the results."""
-    API_key = st.secrets["GOOGLE_API"]
-    search_engine_id = st.secrets["GOOGLE_ID"]
+    API_key = st.secrets["API_key"]
+    search_engine_id = st.secrets["search_engine_id"]
     search_url = f"https://www.googleapis.com/customsearch/v1?q={requests.utils.quote(query)}&key={API_key}&cx={search_engine_id}"
     
     try:
