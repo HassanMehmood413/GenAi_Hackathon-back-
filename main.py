@@ -63,9 +63,9 @@ async def translate_text(text, target_language):
 
 
 async def fetch_article_by_title(title):
-    api_key = ""
+    API_key = ""
     search_engine_id = ""
-    search_url = f"https://www.googleapis.com/customsearch/v1?q={requests.utils.quote(title)}&key={api_key}&cx={search_engine_id}"
+    search_url = f"https://www.googleapis.com/customsearch/v1?q={requests.utils.quote(title)}&key={API_key}&cx={search_engine_id}"
     
     try:
         async with aiohttp.ClientSession() as session:
