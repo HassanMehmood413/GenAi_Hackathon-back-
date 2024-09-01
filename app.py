@@ -34,6 +34,8 @@ if 'search_results' not in st.session_state:
     st.session_state.search_results = []
 if 'questions' not in st.session_state:
     st.session_state.questions = []
+if 'meta_description' not in st.session_state:
+    st.session_state.meta_description = None
 
 # Custom CSS for styling
 st.markdown("""
@@ -113,30 +115,6 @@ async def translate_text(text, target_language):
         st.error(f"Error translating text: {e}")
         return None
 
-async def fetch_article_by_title(title):
-    """Fetches an article's text by searching for its title."""
-    API_key = st.secrets["API_key"]
-    search_engine_id = st.secrets["search_engine_id"]
-    search_url = f"https://www.googleapis.com/customsearch/v1?q={requests.utils.quote(title)}&key={API_key}&cx={search_engine_id}"
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(search_url) as response:
-                response.raise_for_status()
-                search_results = await response.json()
-
-                if 'items' not in search_results or not search_results['items']:
-                    st.warning("No articles found for the given title.")
-                    return None, None, None
-                
-                first_result = search_results['items'][0]
-                article_url = first_result.get("link")
-                article_text, source_url = await fetch_article_text(article_url)
-                return article_text, source_url
-    except Exception as e:
-        st.error(f"Error fetching articles: {e}")
-        return None, None, None
-
 async def search_articles(query):
     """Searches for articles based on a query and returns the results."""
     API_key = st.secrets["API_key"]
@@ -192,9 +170,45 @@ def generate_audio(text: str, language: str):
     except Exception as e:
         st.error(f"Error generating audio: {e}")
 
+async def generate_meta_description(text):
+    """Generates a meta description for the given text using OpenAI."""
+    try:
+        response = await openai.ChatCompletion.acreate(
+            model="meta-llama/Meta-Llama-3-8B-Instruct-Turbo",
+            messages=[
+                {"role": "system", "content": "Generate a concise meta description (maximum 155 characters) for the following text:"},
+                {"role": "user", "content": text}
+            ],
+            temperature=0.7,
+            max_tokens=100,
+        )
+        meta_description = response.choices[0].message['content']
+        return meta_description
+    except Exception as e:
+        st.error(f"Error generating meta description: {e}")
+        return None
+
+async def generate_summary(text):
+    """Generates a summary for the given text using OpenAI."""
+    try:
+        response = await openai.ChatCompletion.acreate(
+            model="meta-llama/Meta-Llama-3-8B-Instruct-Turbo",
+            messages=[
+                {"role": "system", "content": "Generate a concise summary of the following text:"},
+                {"role": "user", "content": text}
+            ],
+            temperature=0.7,
+            max_tokens=200,
+        )
+        summary = response.choices[0].message['content']
+        return summary
+    except Exception as e:
+        st.error(f"Error generating summary: {e}")
+        return None
+
 # Sidebar for input fields and buttons
 with st.sidebar:
-    option = st.selectbox("How do you want to enter the news?", ("URL", "Title"))
+    option = st.selectbox("How do you want to enter the news?", ("URL", "None"))
     language = st.selectbox("Select the language for the article:", ("English", "Urdu", "Spanish", "French"))
 
     if option == "URL":
@@ -208,8 +222,6 @@ with st.sidebar:
         if url or title:
             if url:
                 article_text, authors, source_url = asyncio.run(fetch_article_text(url))
-            else:
-                article_text, authors, source_url = asyncio.run(fetch_article_by_title(title))
 
             if article_text:
                 if language_map[language] != "en":
@@ -240,10 +252,40 @@ with st.sidebar:
         else:
             st.error("No article text available for audio generation.")
 
+    # Meta description input and button
+    meta_text = st.text_area("Enter text for meta description:", height=100)
+    if st.button("Generate Meta Description"):
+        if meta_text:
+            meta_description = asyncio.run(generate_meta_description(meta_text))
+            if meta_description:
+                st.session_state.meta_description = meta_description
+                st.success("Meta description generated successfully!")
+            else:
+                st.error("Failed to generate meta description.")
+        else:
+            st.error("Please enter text for the meta description.")
+
+    # Generate Summary button
+    if st.button("Generate Summary"):
+        if st.session_state.article_text:
+            summary = asyncio.run(generate_summary(st.session_state.article_text))
+            if summary:
+                st.session_state.summary = summary
+                st.success("Summary generated successfully!")
+            else:
+                st.error("Failed to generate summary.")
+        else:
+            st.error("No article text available for summarization.")
+
 # Main area for displaying fetched data
 if st.session_state.article_text:
     st.subheader("Article Text")
     st.write(st.session_state.article_text)
+
+    # Display Summary
+    if st.session_state.summary:
+        st.subheader("Article Summary")
+        st.write(st.session_state.summary)
 
     # Authors and source URL
     if st.session_state.authors:
@@ -277,3 +319,7 @@ if st.session_state.search_results:
     st.subheader("Search Results")
     for result in st.session_state.search_results:
         st.write(f"[{result['title']}]({result['link']})")
+
+if st.session_state.meta_description:
+    st.subheader("Generated Meta Description")
+    st.write(st.session_state.meta_description)
