@@ -11,7 +11,7 @@ from io import BytesIO
 st.set_page_config(layout="wide")
 
 # Define API configurations
-api_key = st.secrets["api_key"]
+api_key = st.secrets["AIML_KEY"]
 base_url = "https://api.aimlapi.com"
 openai.api_key = api_key
 openai.api_base = base_url
